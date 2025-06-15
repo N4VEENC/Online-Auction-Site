@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BidMaster - Sell an Item</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>BidMaster</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="explore.html">Explore Auctions</a></li>
+                    <li><a href="sell.html" class="active">Sell an Item</a></li>
+                    <li><a href="login.html" id="loginLink">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="sell-section">
+            <div class="container">
+                <h2>Sell an Item</h2>
+                
+                <div id="loginPrompt" style="display: none;">
+                    <p>Please <a href="login.html">log in</a> to list an item for auction.</p>
+                </div>
+                
+                <form id="sellForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="itemTitle">Item Title</label>
+                        <input type="text" id="itemTitle" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemDescription">Description</label>
+                        <textarea id="itemDescription" rows="5" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemImageUrl">Image URL (Optional)</label>
+                        <input type="url" id="itemImageUrl" placeholder="https://example.com/image.jpg">
+                        <p class="form-help">Enter a URL to an image of your item</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="startingBid">Starting Bid (₹)</label>
+                        <input type="number" id="startingBid" min="0.01" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Auction End Date and Time</label>
+                        <div class="datetime-inputs">
+                            <input type="date" id="auctionEndDate" required>
+                            <input type="time" id="auctionEndTime" required>
+                        </div>
+                        <p class="form-help">Select when your auction should end</p>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">List Item for Auction</button>
+                </form>
+                
+                <div id="successMessage" style="display: none;">
+                    <h3>Item Listed Successfully!</h3>
+                    <p>Your item has been listed for auction.</p>
+                    <div class="cta-buttons">
+                        <a href="explore.html" class="btn btn-primary">View All Auctions</a>
+                        <button id="listAnotherButton" class="btn btn-secondary">List Another Item</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 BidMaster. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavigation();
+            checkLoginStatus();
+            setDefaultEndDateTime();
+            
+            // Set up event listeners
+            document.getElementById('sellForm').addEventListener('submit', listItem);
+            document.getElementById('listAnotherButton').addEventListener('click', () => {
+                document.getElementById('successMessage').style.display = 'none';
+                document.getElementById('sellForm').style.display = 'block';
+                document.getElementById('sellForm').reset();
+                setDefaultEndDateTime();
+            });
+        });
+        
+        function setDefaultEndDateTime() {
+            // Set default end date to 3 days from now
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + 3);
+            
+            // Format date for input
+            const year = endDate.getFullYear();
+            const month = String(endDate.getMonth() + 1).padStart(2, '0');
+            const day = String(endDate.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
+            
+            // Set default time to 12:00
+            const timeString = '12:00';
+            
+            // Set values in form
+            document.getElementById('auctionEndDate').value = dateString;
+            document.getElementById('auctionEndTime').value = timeString;
+        }
+        
+        function checkLoginStatus() {
+            const currentUser = getCurrentUser();
+            
+            if (currentUser) {
+                document.getElementById('loginPrompt').style.display = 'none';
+                document.getElementById('sellForm').style.display = 'block';
+            } else {
+                document.getElementById('loginPrompt').style.display = 'block';
+                document.getElementById('sellForm').style.display = 'none';
+            }
+        }
+        
+        function listItem(event) {
+            event.preventDefault();
+            
+            const currentUser = getCurrentUser();
+            if (!currentUser) {
+                alert('Please log in to list an item.');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const title = document.getElementById('itemTitle').value;
+            const description = document.getElementById('itemDescription').value;
+            const imageUrl = document.getElementById('itemImageUrl').value;
+            const startingBid = document.getElementById('startingBid').value;
+            const endDate = document.getElementById('auctionEndDate').value;
+            const endTime = document.getElementById('auctionEndTime').value;
+            
+            // Combine date and time for end date
+            const endDateTime = new Date(`${endDate}T${endTime}`);
+            
+            // Validate end date is in the future
+            if (endDateTime <= new Date()) {
+                alert('Auction end time must be in the future.');
+                return;
+            }
+            
+            fetch('/api/items', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    imageUrl,
+                    startingBid,
+                    endDate: endDateTime.toISOString(),
+                    sellerId: currentUser.id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('sellForm').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                } else {
+                    alert('Error listing item. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error listing item:', error);
+                alert('Error listing item. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html>

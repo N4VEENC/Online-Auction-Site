@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BidMaster - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>BidMaster</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="explore.html">Explore Auctions</a></li>
+                    <li><a href="sell.html">Sell an Item</a></li>
+                    <li><a href="login.html" class="active" id="loginLink">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="login-section">
+            <div class="container">
+                <div id="loginForm">
+                    <div class="auth-tabs">
+                        <button class="tab-button active" data-tab="login">Login</button>
+                        <button class="tab-button" data-tab="register">Register</button>
+                    </div>
+                    
+                    <div id="loginTab" class="auth-tab-content">
+                        <h2>Login</h2>
+                        <p>Enter your details to login to your account.</p>
+                        
+                        <form id="loginAuthForm">
+                            <div class="form-group">
+                                <label for="loginUsername">Username</label>
+                                <input type="text" id="loginUsername" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="loginPassword">Password</label>
+                                <input type="password" id="loginPassword" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Login</button>
+                        </form>
+                    </div>
+                    
+                    <div id="registerTab" class="auth-tab-content" style="display: none;">
+                        <h2>Register</h2>
+                        <p>Create a new account to start bidding and selling.</p>
+                        
+                        <form id="registerAuthForm">
+                            <div class="form-group">
+                                <label for="registerUsername">Username</label>
+                                <input type="text" id="registerUsername" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="registerEmail">Email</label>
+                                <input type="email" id="registerEmail" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="registerPassword">Password</label>
+                                <input type="password" id="registerPassword" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm Password</label>
+                                <input type="password" id="confirmPassword" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Register</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div id="userProfile" style="display: none;">
+                    <h2>Welcome, <span id="profileUsername"></span>!</h2>
+                    
+                    <div class="profile-actions">
+                        <a href="explore.html" class="btn btn-primary">Browse Auctions</a>
+                        <a href="sell.html" class="btn btn-secondary">Sell an Item</a>
+                        <button id="logoutButton" class="btn btn-outline">Logout</button>
+                    </div>
+                    
+                    <div class="user-activity">
+                        <h3>Your Activity</h3>
+                        <div class="activity-tabs">
+                            <button class="tab-button active" data-tab="bids">Your Bids</button>
+                            <button class="tab-button" data-tab="listings">Your Listings</button>
+                            <button class="tab-button" data-tab="won">Items Won</button>
+                        </div>
+                        
+                        <div class="tab-content" id="bidsTab">
+                            <p>Loading your bids...</p>
+                        </div>
+                        
+                        <div class="tab-content" id="listingsTab" style="display: none;">
+                            <p>Loading your listings...</p>
+                        </div>
+                        
+                        <div class="tab-content" id="wonTab" style="display: none;">
+                            <p>Loading items you've won...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 BidMaster. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavigation();
+            checkLoginStatus();
+            
+            // Set up auth tab switching
+            document.querySelectorAll('.auth-tabs .tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    document.querySelectorAll('.auth-tabs .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked tab
+                    button.classList.add('active');
+                    
+                    // Hide all tab content
+                    document.querySelectorAll('.auth-tab-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    // Show selected tab content
+                    const tabId = button.getAttribute('data-tab') + 'Tab';
+                    document.getElementById(tabId).style.display = 'block';
+                });
+            });
+            
+            // Set up event listeners
+            document.getElementById('loginAuthForm').addEventListener('submit', handleLogin);
+            document.getElementById('registerAuthForm').addEventListener('submit', handleRegister);
+            document.getElementById('logoutButton').addEventListener('click', handleLogout);
+            
+            // Tab switching for user profile
+            document.querySelectorAll('.activity-tabs .tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    document.querySelectorAll('.activity-tabs .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked tab
+                    button.classList.add('active');
+                    
+                    // Hide all tab content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    // Show selected tab content
+                    const tabId = button.getAttribute('data-tab') + 'Tab';
+                    document.getElementById(tabId).style.display = 'block';
+                });
+            });
+        });
+        
+        function checkLoginStatus() {
+            const currentUser = getCurrentUser();
+            
+            if (currentUser) {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('userProfile').style.display = 'block';
+                document.getElementById('profileUsername').textContent = currentUser.username;
+                
+                // Load user activity data
+                loadUserBids();
+                loadUserListings();
+                loadWonItems();
+            } else {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('userProfile').style.display = 'none';
+            }
+        }
+        
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                alert('Please enter both username and password.');
+                return;
+            }
+            
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Save user data to localStorage
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                    // Update UI
+                    checkLoginStatus();
+                    updateNavigation();
+                } else {
+                    alert('Login failed. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error during login:', error);
+                alert('Error during login. Please try again.');
+            });
+        }
+        
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!username || !email || !password || !confirmPassword) {
+                alert('Please fill in all fields.');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                alert('Passwords do not match.');
+                return;
+            }
+            
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, email, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Registration successful! You can now log in.');
+                    
+                    // Switch to login tab
+                    document.querySelector('.auth-tabs .tab-button[data-tab="login"]').click();
+                    
+                    // Pre-fill login form
+                    document.getElementById('loginUsername').value = username;
+                } else {
+                    alert(`Registration failed: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error during registration:', error);
+                alert('Error during registration. Please try again.');
+            });
+        }
+        
+        function handleLogout() {
+            // Clear user data from localStorage
+            localStorage.removeItem('currentUser');
+            
+            // Update UI
+            checkLoginStatus();
+            updateNavigation();
+        }
+        
+        function loadUserBids() {
+            const currentUser = getCurrentUser();
+            if (!currentUser) return;
+            
+            fetch('/api/items')
+                .then(response => response.json())
+                .then(items => {
+                    // Filter items where the user has placed the highest bid
+                    const userBids = items.filter(item => item.highestBidderId === currentUser.id);
+                    
+                    const bidsTab = document.getElementById('bidsTab');
+                    
+                    if (userBids.length === 0) {
+                        bidsTab.innerHTML = '<p>You have not placed any bids yet.</p>';
+                        return;
+                    }
+                    
+                    bidsTab.innerHTML = `
+                        <div class="activity-items">
+                            ${userBids.map(item => `
+                                <div class="activity-item">
+                                    <h4>${item.title}</h4>
+                                    <p>Your Bid: ₹${item.currentBid.toFixed(2)}</p>
+                                    <p>Status: ${getStatusText(item)}</p>
+                                    <p>Ends: ${new Date(item.endDate).toLocaleString()}</p>
+                                    <a href="explore.html?item=${item.id}" class="btn btn-small">View Item</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading user bids:', error);
+                    document.getElementById('bidsTab').innerHTML = '<p>Error loading your bids. Please try again later.</p>';
+                });
+        }
+        
+        function loadUserListings() {
+            const currentUser = getCurrentUser();
+            if (!currentUser) return;
+            
+            fetch('/api/items')
+                .then(response => response.json())
+                .then(items => {
+                    // Filter items where the user is the seller
+                    const userListings = items.filter(item => item.sellerId === currentUser.id);
+                    
+                    const listingsTab = document.getElementById('listingsTab');
+                    
+                    if (userListings.length === 0) {
+                        listingsTab.innerHTML = '<p>You have not listed any items yet.</p>';
+                        return;
+                    }
+                    
+                    listingsTab.innerHTML = `
+                        <div class="activity-items">
+                            ${userListings.map(item => `
+                                <div class="activity-item">
+                                    <h4>${item.title}</h4>
+                                    <p>Current Bid: ₹${item.currentBid.toFixed(2)}</p>
+                                    <p>Status: ${getStatusText(item)}</p>
+                                    <p>Ends: ${new Date(item.endDate).toLocaleString()}</p>
+                                    <a href="explore.html?item=${item.id}" class="btn btn-small">View Item</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading user listings:', error);
+                    document.getElementById('listingsTab').innerHTML = '<p>Error loading your listings. Please try again later.</p>';
+                });
+        }
+        
+        function loadWonItems() {
+            const currentUser = getCurrentUser();
+            if (!currentUser) return;
+            
+            fetch('/api/items')
+                .then(response => response.json())
+                .then(items => {
+                    // Filter items that the user has won (ended auctions where user is highest bidder)
+                    const wonItems = items.filter(item => 
+                        item.highestBidderId === currentUser.id && 
+                        (item.status === 'ended' || item.status === 'paid')
+                    );
+                    
+                    const wonTab = document.getElementById('wonTab');
+                    
+                    if (wonItems.length === 0) {
+                        wonTab.innerHTML = '<p>You have not won any auctions yet.</p>';
+                        return;
+                    }
+                    
+                    wonTab.innerHTML = `
+                        <div class="activity-items">
+                            ${wonItems.map(item => `
+                                <div class="activity-item">
+                                    <h4>${item.title}</h4>
+                                    <p>Your Winning Bid: ₹${item.currentBid.toFixed(2)}</p>
+                                    <p>Status: ${getStatusText(item)}</p>
+                                    ${item.status === 'ended' ? 
+                                        `<a href="explore.html?item=${item.id}" class="btn btn-success btn-small">Complete Payment</a>` : 
+                                        `<p class="success-text">Payment Complete</p>`
+                                    }
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading won items:', error);
+                    document.getElementById('wonTab').innerHTML = '<p>Error loading your won items. Please try again later.</p>';
+                });
+        }
+    </script>
+</body>
+</html>

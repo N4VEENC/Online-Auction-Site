@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - BidMaster</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container {
+            padding: 20px;
+        }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .admin-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .admin-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .admin-tab.active {
+            border: 1px solid #ddd;
+            border-bottom-color: white;
+            border-radius: 5px 5px 0 0;
+            margin-bottom: -1px;
+            background-color: white;
+            font-weight: bold;
+        }
+        
+        .admin-content {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .admin-panel {
+            display: none;
+        }
+        
+        .admin-panel.active {
+            display: block;
+        }
+        
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .admin-table th, .admin-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .admin-table th {
+            background-color: #f5f5f5;
+        }
+        
+        .admin-action-btn {
+            margin-right: 5px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .view-btn {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .login-form {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            margin-top: 0;
+            color: #6c757d;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #343a40;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>BidMaster - Admin</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="explore.html">Explore Auctions</a></li>
+                    <li><a href="admin.html" class="active">Admin</a></li>
+                    <li><a href="#" id="adminLogoutLink" style="display: none;">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container" id="adminLoginContainer">
+            <div class="login-form">
+                <h2>Admin Login</h2>
+                <div class="form-group">
+                    <label for="adminUsername">Username</label>
+                    <input type="text" id="adminUsername" placeholder="Enter admin username">
+                </div>
+                <div class="form-group">
+                    <label for="adminPassword">Password</label>
+                    <input type="password" id="adminPassword" placeholder="Enter admin password">
+                </div>
+                <button id="adminLoginBtn" class="btn btn-primary">Login</button>
+                <p id="adminLoginError" class="error-message" style="display: none;"></p>
+            </div>
+        </div>
+
+        <div class="container admin-container" id="adminDashboardContainer" style="display: none;">
+            <div class="admin-header">
+                <h2>Admin Dashboard</h2>
+                <p>Welcome, <span id="adminName"></span></p>
+            </div>
+            
+            <div class="admin-tabs">
+                <div class="admin-tab active" data-tab="dashboard">Dashboard</div>
+                <div class="admin-tab" data-tab="users">Users</div>
+                <div class="admin-tab" data-tab="items">Items</div>
+                <div class="admin-tab" data-tab="bids">Bids</div>
+            </div>
+            
+            <div class="admin-content">
+                <!-- Dashboard Panel -->
+                <div class="admin-panel active" id="dashboard-panel">
+                    <h3>System Overview</h3>
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <h3>Total Users</h3>
+                            <div class="stat-value" id="totalUsers">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Items</h3>
+                            <div class="stat-value" id="totalItems">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Active Auctions</h3>
+                            <div class="stat-value" id="activeAuctions">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Bids</h3>
+                            <div class="stat-value" id="totalBids">0</div>
+                        </div>
+                    </div>
+                    
+                    <h3>Recent Activity</h3>
+                    <table class="admin-table" id="recentActivityTable">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Details</th>
+                                <th>User</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Recent activity will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Users Panel -->
+                <div class="admin-panel" id="users-panel">
+                    <h3>User Management</h3>
+                    <table class="admin-table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Items</th>
+                                <th>Bids</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Items Panel -->
+                <div class="admin-panel" id="items-panel">
+                    <h3>Item Management</h3>
+                    <table class="admin-table" id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Seller</th>
+                                <th>Current Bid</th>
+                                <th>Status</th>
+                                <th>End Date</th>
+                                <th>Winner</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Items will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Bids Panel -->
+                <div class="admin-panel" id="bids-panel">
+                    <h3>Bid History</h3>
+                    <table class="admin-table" id="bidsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Item</th>
+                                <th>Bidder</th>
+                                <th>Amount</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Bids will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 Online Auction. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Admin credentials
+        const ADMIN_USERNAME = "admin";
+        const ADMIN_PASSWORD = "auction123"; // This is the password you'll use to login
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Admin login
+            document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
+            
+            // Admin logout
+            document.getElementById('adminLogoutLink').addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('adminLoggedIn');
+                window.location.reload();
+            });
+            
+            // Tab switching
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and panels
+                    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding panel
+                    tab.classList.add('active');
+                    const panelId = `${tab.dataset.tab}-panel`;
+                    document.getElementById(panelId).classList.add('active');
+                });
+            });
+            
+            // Check if admin is logged in
+            if (localStorage.getItem('adminLoggedIn') === 'true') {
+                showAdminDashboard();
+            }
+        });
+        
+        function adminLogin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            const errorElement = document.getElementById('adminLoginError');
+            
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                localStorage.setItem('adminLoggedIn', 'true');
+                showAdminDashboard();
+            } else {
+                errorElement.textContent = 'Invalid username or password';
+                errorElement.style.display = 'block';
+            }
+        }
+        
+        function showAdminDashboard() {
+            document.getElementById('adminLoginContainer').style.display = 'none';
+            document.getElementById('adminDashboardContainer').style.display = 'block';
+            document.getElementById('adminLogoutLink').style.display = 'inline-block';
+            document.getElementById('adminName').textContent = ADMIN_USERNAME;
+            
+            // Load dashboard data
+            loadDashboardData();
+            loadUsers();
+            loadItems();
+            loadBids();
+        }
+        
+        function loadDashboardData() {
+            // Fetch stats
+            fetch('/api/admin/stats')
+                .then(response => response.json())
+                .then(stats => {
+                    document.getElementById('totalUsers').textContent = stats.totalUsers;
+                    document.getElementById('totalItems').textContent = stats.totalItems;
+                    document.getElementById('activeAuctions').textContent = stats.activeAuctions;
+                    document.getElementById('totalBids').textContent = stats.totalBids;
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                });
+                
+            // Fetch recent activity
+            fetch('/api/admin/activity')
+                .then(response => response.json())
+                .then(activities => {
+                    const activityTable = document.getElementById('recentActivityTable').querySelector('tbody');
+                    
+                    activityTable.innerHTML = activities.map(activity => `
+                        <tr>
+                            <td>${activity.type}</td>
+                            <td>${activity.details}</td>
+                            <td>${activity.username}</td>
+                            <td>${new Date(activity.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading activity:', error);
+                });
+        }
+        
+        function loadUsers() {
+            fetch('/api/admin/users')
+                .then(response => response.json())
+                .then(users => {
+                    const usersTable = document.getElementById('usersTable').querySelector('tbody');
+                    
+                    usersTable.innerHTML = users.map(user => `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.username}</td>
+                            <td>${user.email}</td>
+                            <td>${user.itemsCount}</td>
+                            <td>${user.bidsCount}</td>
+                            <td>
+                                <button class="admin-action-btn view-btn" onclick="viewUserDetails(${user.id})">View</button>
+                                <button class="admin-action-btn delete-btn" onclick="deleteUser(${user.id})">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading users:', error);
+                });
+        }
+        
+        function loadItems() {
+            fetch('/api/admin/items')
+                .then(response => response.json())
+                .then(items => {
+                    const itemsTable = document.getElementById('itemsTable').querySelector('tbody');
+                    
+                    itemsTable.innerHTML = items.map(item => `
+                        <tr>
+                            <td>${item.id}</td>
+                            <td>${item.title}</td>
+                            <td>${item.sellerName}</td>
+                            <td>₹${item.currentBid.toFixed(2)}</td>
+                            <td>${item.status}</td>
+                            <td>${new Date(item.endDate).toLocaleString()}</td>
+                            <td>${item.winnerName || '-'}</td>
+                            <td>
+                                <button class="admin-action-btn view-btn" onclick="viewItemDetails(${item.id})">View</button>
+                                <button class="admin-action-btn delete-btn" onclick="deleteItem(${item.id})">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading items:', error);
+                });
+        }
+        
+        function loadBids() {
+            fetch('/api/admin/bids')
+                .then(response => response.json())
+                .then(bids => {
+                    const bidsTable = document.getElementById('bidsTable').querySelector('tbody');
+                    
+                    bidsTable.innerHTML = bids.map(bid => `
+                        <tr>
+                            <td>${bid.id}</td>
+                            <td>${bid.itemTitle}</td>
+                            <td>${bid.bidderName}</td>
+                            <td>₹${bid.amount.toFixed(2)}</td>
+                            <td>${new Date(bid.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading bids:', error);
+                });
+        }
+        
+        function viewUserDetails(userId) {
+            window.open(`/admin/user/${userId}`, '_blank');
+        }
+        
+        function deleteUser(userId) {
+            if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User deleted successfully');
+                        loadUsers();
+                        loadDashboardData();
+                    } else {
+                        alert(`Error: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting user:', error);
+                    alert('Error deleting user. Please try again.');
+                });
+            }
+        }
+        
+        function viewItemDetails(itemId) {
+            window.open(`/explore.html?item=${itemId}`, '_blank');
+        }
+        
+        function deleteItem(itemId) {
+            if (confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+                fetch(`/api/admin/items/${itemId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Item deleted successfully');
+                        loadItems();
+                        loadDashboardData();
+                    } else {
+                        alert(`Error: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting item:', error);
+                    alert('Error deleting item. Please try again.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

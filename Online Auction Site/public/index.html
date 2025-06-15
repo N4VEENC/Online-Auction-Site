@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BidMaster - Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>BidMaster</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="active">Home</a></li>
+                    <li><a href="explore.html">Explore Auctions</a></li>
+                    <li><a href="sell.html">Sell an Item</a></li>
+                    <li><a href="login.html" id="loginLink">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h2>Welcome to Online Auction</h2>
+                <p>Discover unique items and bid on your favorites or sell your own treasures.</p>
+                <div class="cta-buttons">
+                    <a href="explore.html" class="btn btn-primary">Browse Auctions</a>
+                    <a href="sell.html" class="btn btn-secondary">Sell an Item</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="featured-items">
+            <div class="container">
+                <h2>Featured Auctions</h2>
+                <div class="items-grid" id="featuredItemsContainer">
+                    <!-- Items will be loaded here via JavaScript -->
+                    <p>Loading featured items...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works">
+            <div class="container">
+                <h2>How It Works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <h3>Create an Account</h3>
+                        <p>Sign up for free and start browsing auctions.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <h3>Find Items</h3>
+                        <p>Browse through our wide selection of items up for auction.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <h3>Bid & Win</h3>
+                        <p>Place your bids and win amazing items at great prices.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <h3>Pay & Receive</h3>
+                        <p>Complete your payment and receive your item.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 BidMaster. All rights reserved.</p>
+            <a href="admin.html" class="admin-link">Admin</a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Load featured items when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavigation();
+            loadFeaturedItems();
+        });
+
+        function loadFeaturedItems() {
+            fetch('/api/items')
+                .then(response => response.json())
+                .then(items => {
+                    // Sort by creation date and take the latest 4 items
+                    const featuredItems = items
+                        .filter(item => item.status === 'active')
+                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                        .slice(0, 4);
+                    
+                    displayFeaturedItems(featuredItems);
+                })
+                .catch(error => {
+                    console.error('Error loading featured items:', error);
+                    document.getElementById('featuredItemsContainer').innerHTML = '<p>Error loading items. Please try again later.</p>';
+                });
+        }
+    
+        function displayFeaturedItems(items) {
+            const container = document.getElementById('featuredItemsContainer');
+            
+            if (items.length === 0) {
+                container.innerHTML = '<p>No active auctions available at the moment.</p>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => `
+                <div class="item-card">
+                    ${item.imageUrl ? `<div class="item-image-container"><img src="${item.imageUrl}" alt="${item.title}" class="item-card-image"></div>` : ''}
+                    <h3>${item.title}</h3>
+                    <p class="item-description">${item.description.substring(0, 100)}${item.description.length > 100 ? '...' : ''}</p>
+                    <p class="current-bid">Current Bid: ₹${item.currentBid.toFixed(2)}</p>
+                    <p class="time-left" data-end-date="${item.endDate}">${getTimeLeft(item.endDate)}</p>
+                    <p class="status ${item.status}">${getStatusText(item)}</p>
+                    <a href="explore.html?item=${item.id}" class="btn btn-primary">View Details</a>
+                </div>
+            `).join('');
+            
+            // Start the countdown timer for all items
+            startLiveCountdown();
+        }
+        
+        // Add these helper functions if they're not already in script.js
+                function getTimeLeft(endDate) {
+                    const end = new Date(endDate);
+                    const now = new Date();
+                    
+                    if (now >= end) {
+                        return 'Auction ended';
+                    }
+                    
+                    const diff = end - now;
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    if (days > 0) {
+                        return `${days} day${days !== 1 ? 's' : ''} ${hours} hr left`;
+                    } else if (hours > 0) {
+                        return `${hours} hr ${minutes} min left`;
+                    } else {
+                        return `${minutes} min left`;
+                    }
+                }
+                
+                function getStatusText(item) {
+                    switch (item.status) {
+                        case 'active':
+                            return 'Active';
+                        case 'ended':
+                            return 'Ended';
+                        case 'paid':
+                            return 'Sold';
+                        default:
+                            return item.status;
+                    }
+                }
+                
+                function startLiveCountdown() {
+                    const countdownElements = document.querySelectorAll('.time-left[data-end-date]');
+                    
+                    countdownElements.forEach(element => {
+                        const endDate = element.getAttribute('data-end-date');
+                        element.textContent = getTimeLeft(endDate);
+                    });
+                }
+    </script>
+</body>
+</html>

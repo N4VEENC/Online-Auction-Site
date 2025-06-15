@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BidMaster - Explore</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>BidMaster</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="explore.html" class="active">Explore Auctions</a></li>
+                    <li><a href="sell.html">Sell an Item</a></li>
+                    <li><a href="login.html" id="loginLink">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="explore-section">
+            <div class="container">
+                <h2>Explore Auctions</h2>
+                
+                <div class="filters">
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" placeholder="Search for items...">
+                        <button id="searchButton" class="btn">Search</button>
+                    </div>
+                    <div class="filter-options">
+                        <select id="statusFilter">
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="ended">Ended</option>
+                            <option value="paid">Sold</option>
+                        </select>
+                        <select id="sortOption">
+                            <option value="newest">Newest First</option>
+                            <option value="ending-soon">Ending Soon</option>
+                            <option value="price-low">Price: Low to High</option>
+                            <option value="price-high">Price: High to Low</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="items-grid" id="itemsContainer">
+                    <!-- Items will be loaded here via JavaScript -->
+                    <p>Loading items...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Item Detail Modal -->
+        <div id="itemModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="itemDetails">
+                    <!-- Item details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Modal -->
+        <div id="paymentModal" class="modal">
+            <div class="modal-content">
+                <span class="close payment-close">&times;</span>
+                <div id="paymentForm">
+                    <h2>Complete Your Payment</h2>
+                    <div class="form-group">
+                        <label for="cardName">Name on Card</label>
+                        <input type="text" id="cardName" placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="cardNumber">Card Number</label>
+                        <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expiryDate">Expiry Date</label>
+                            <input type="text" id="expiryDate" placeholder="MM/YY">
+                        </div>
+                        <div class="form-group">
+                            <label for="cvv">CVV</label>
+                            <input type="text" id="cvv" placeholder="123">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="billingAddress">Billing Address</label>
+                        <textarea id="billingAddress" placeholder="Enter your billing address"></textarea>
+                    </div>
+                    <div class="payment-summary">
+                        <h3>Payment Summary</h3>
+                        <p>Item: <span id="paymentItemTitle"></span></p>
+                        <p>Amount: ₹<span id="paymentAmount"></span></p>
+                    </div>
+                    <button id="submitPayment" class="btn btn-primary">Pay Now</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 BidMaster. All rights reserved.</p>
+            <a href="admin.html" class="admin-link">Admin</a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        let allItems = [];
+        let currentItem = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavigation();
+            loadItems();
+            
+            // Set up event listeners
+            document.getElementById('searchButton').addEventListener('click', filterItems);
+            document.getElementById('searchInput').addEventListener('keyup', event => {
+                if (event.key === 'Enter') filterItems();
+            });
+            document.getElementById('statusFilter').addEventListener('change', filterItems);
+            document.getElementById('sortOption').addEventListener('change', filterItems);
+            
+            // Modal close buttons
+            document.querySelector('.close').addEventListener('click', () => {
+                document.getElementById('itemModal').style.display = 'none';
+            });
+            
+            document.querySelector('.payment-close').addEventListener('click', () => {
+                document.getElementById('paymentModal').style.display = 'none';
+            });
+            
+            // Submit payment button
+            document.getElementById('submitPayment').addEventListener('click', processPayment);
+            
+            // Check for item ID in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const itemId = urlParams.get('item');
+            if (itemId) {
+                setTimeout(() => {
+                    openItemDetails(parseInt(itemId));
+                }, 500);
+            }
+        });
+        
+        function loadItems() {
+            fetch('/api/items')
+                .then(response => response.json())
+                .then(items => {
+                    allItems = items;
+                    displayItems(items);
+                })
+                .catch(error => {
+                    console.error('Error loading items:', error);
+                    document.getElementById('itemsContainer').innerHTML = '<p>Error loading items. Please try again later.</p>';
+                });
+        }
+        
+        function displayItems(items) {
+            const itemsContainer = document.getElementById('itemsContainer');
+            
+            if (items.length === 0) {
+                itemsContainer.innerHTML = '<p>No items available.</p>';
+                return;
+            }
+            
+            itemsContainer.innerHTML = items.map(item => `
+                <div class="item-card" data-id="${item.id}">
+                    ${item.imageUrl ? `<div class="item-image-container"><img src="${item.imageUrl}" alt="${item.title}" class="item-card-image"></div>` : ''}
+                    <h3>${item.title}</h3>
+                    <p class="item-description">${item.description.substring(0, 100)}${item.description.length > 100 ? '...' : ''}</p>
+                    <p class="current-bid">Current Bid: ₹${item.currentBid.toFixed(2)}</p>
+                    <p class="time-left" data-end-date="${item.endDate}">${getTimeLeft(item.endDate)}</p>
+                    <p class="status ${item.status}">${getStatusText(item)}</p>
+                    <button class="btn btn-primary view-details" data-id="${item.id}">View Details</button>
+                </div>
+            `).join('');
+            
+            // Add event listeners to view details buttons
+            document.querySelectorAll('.view-details').forEach(button => {
+                button.addEventListener('click', () => {
+                    openItemDetails(parseInt(button.getAttribute('data-id')));
+                });
+            });
+        }
+        
+        function filterItems() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sortOption = document.getElementById('sortOption').value;
+            
+            let filteredItems = [...allItems];
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredItems = filteredItems.filter(item => 
+                    item.title.toLowerCase().includes(searchTerm) || 
+                    item.description.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Apply status filter
+            if (statusFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.status === statusFilter);
+            }
+            
+            // Apply sorting
+            switch (sortOption) {
+                case 'newest':
+                    filteredItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    break;
+                case 'ending-soon':
+                    filteredItems.sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+                    break;
+                case 'price-low':
+                    filteredItems.sort((a, b) => a.currentBid - b.currentBid);
+                    break;
+                case 'price-high':
+                    filteredItems.sort((a, b) => b.currentBid - a.currentBid);
+                    break;
+            }
+            
+            displayItems(filteredItems);
+        }
+        
+        function openItemDetails(itemId) {
+            // Find the item by ID from the allItems array
+            const item = allItems.find(i => i.id === itemId);
+            if (!item) {
+                console.error(`Item with ID ${itemId} not found`);
+                return;
+            }
+            
+            // Set the current item to the one we found
+            currentItem = item;
+            console.log("Opening item details for:", item.title, "ID:", item.id);
+            
+            const modal = document.getElementById('itemModal');
+            const detailsContainer = document.getElementById('itemDetails');
+            
+            const currentUser = getCurrentUser();
+            const isWinner = currentUser && item.highestBidderId === currentUser.id && (item.status === 'ended' || item.status === 'paid');
+            const canPay = isWinner && item.status === 'ended';
+            const isSeller = currentUser && item.sellerId === currentUser.id;
+            
+            // Fetch bid history and winner info for this item
+            Promise.all([
+                fetch(`/api/items/${itemId}/bids`).then(response => response.json()),
+                fetch(`/api/items/${itemId}/winner`).then(response => response.json())
+            ])
+            .then(([bidHistory, winnerInfo]) => {
+                detailsContainer.innerHTML = `
+                    <h2>${item.title}</h2>
+                    <div class="item-detail-content">
+                        <div class="item-info">
+                            ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.title}" class="item-image">` : ''}
+                            <p class="description">${item.description}</p>
+                            <p class="starting-bid">Starting Bid: ₹${item.startingBid.toFixed(2)}</p>
+                            <p class="current-bid">Current Bid: ₹${item.currentBid.toFixed(2)}</p>
+                            <p class="time-left live-countdown" data-end-date="${item.endDate}">${getTimeLeft(item.endDate)}</p>
+                            <p class="status ${item.status}">${getStatusText(item)}</p>
+                            ${isWinner ? '<p class="winner-message">Congratulations! You won this auction!</p>' : ''}
+                            
+                            <div class="bid-history">
+                                <h3>Bid History</h3>
+                                ${bidHistory.length > 0 ? `
+                                    <table class="bid-history-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Bidder</th>
+                                                <th>Amount</th>
+                                                <th>Date & Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${bidHistory.map(bid => `
+                                                <tr>
+                                                    <td>${bid.username}</td>
+                                                    <td>₹${bid.amount.toFixed(2)}</td>
+                                                    <td>${new Date(bid.timestamp).toLocaleString()}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                ` : '<p>No bids yet</p>'}
+                            </div>
+                        </div>
+                        
+                        <div class="bid-section">
+                            ${item.status === 'active' ? `
+                                <h3>Place Your Bid</h3>
+                                <div class="bid-form">
+                                    <input type="number" id="bidAmount" min="${(item.currentBid + 0.01).toFixed(2)}" step="0.01" placeholder="Enter bid amount">
+                                    <button id="placeBidButton" class="btn btn-primary">Place Bid</button>
+                                </div>
+                                <p class="min-bid-note">Minimum bid: ₹${(item.currentBid + 0.01).toFixed(2)}</p>
+                            ` : ''}
+                            
+                            ${canPay ? `
+                                <button id="payNowButton" class="btn btn-success">Pay Now</button>
+                            ` : ''}
+                            
+                            ${!isWinner && !isSeller && item.status !== 'active' && winnerInfo.winner ? `
+                                <div class="winner-info-box">
+                                    <h3>Auction Results</h3>
+                                    <p>This auction has ended.</p>
+                                    <p>Winner: <span class="winner-name">${winnerInfo.winner.username}</span></p>
+                                    <p>Winning Bid: <span class="winning-bid">₹${item.currentBid.toFixed(2)}</span></p>
+                                </div>
+                            ` : ''}
+                            
+                            ${isSeller && (item.status === 'ended' || item.status === 'paid') ? `
+                                <div class="seller-info-box">
+                                    <h3>Seller Dashboard</h3>
+                                    ${winnerInfo.winner ? `
+                                        <p>Winner: <span class="winner-name">${winnerInfo.winner.username}</span></p>
+                                        <p>Winning Bid: <span class="winning-bid">₹${item.currentBid.toFixed(2)}</span></p>
+                                        <p>Payment Status: <span class="payment-status ${item.status === 'paid' ? 'paid' : 'pending'}">${item.status === 'paid' ? 'Paid' : 'Pending'}</span></p>
+                                        ${item.status === 'paid' ? `
+                                            <p class="payment-date">Payment received on: ${new Date(item.paidDate).toLocaleString()}</p>
+                                        ` : ''}
+                                    ` : `
+                                        <p>No bids were placed on this item.</p>
+                                    `}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                modal.style.display = 'block';
+                
+                // Add event listener for place bid button
+                if (item.status === 'active') {
+                    document.getElementById('placeBidButton').addEventListener('click', () => {
+                        placeBid(item.id);
+                    });
+                }
+                
+                // Add event listener for pay now button
+                if (canPay) {
+                    document.getElementById('payNowButton').addEventListener('click', () => {
+                        openPaymentModal(item);
+                    });
+                }
+                
+                // Start live countdown for this item
+                startLiveCountdown();
+            })
+            .catch(error => {
+                console.error('Error loading item details:', error);
+                alert('Error loading item details. Please try again.');
+            });
+        }
+        
+        function placeBid(itemId) {
+            const bidAmount = document.getElementById('bidAmount').value;
+            const currentUser = getCurrentUser();
+            
+            if (!currentUser) {
+                alert('Please log in to place a bid.');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            if (!bidAmount || parseFloat(bidAmount) <= 0) {
+                alert('Please enter a valid bid amount.');
+                return;
+            }
+            
+            // Fix: Use the specific itemId passed to this function instead of relying on currentItem
+            fetch('/api/bids', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    itemId: itemId, // Ensure we're using the correct itemId
+                    userId: currentUser.id,
+                    bidAmount
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Bid placed successfully!');
+                    // Update the item in allItems
+                    const itemIndex = allItems.findIndex(i => i.id === itemId);
+                    if (itemIndex !== -1) {
+                        allItems[itemIndex] = data.item;
+                    }
+                    // Refresh the modal with updated info
+                    openItemDetails(itemId);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error placing bid:', error);
+                alert('Error placing bid. Please try again.');
+            });
+        }
+        
+        function openPaymentModal(item) {
+            const paymentModal = document.getElementById('paymentModal');
+            document.getElementById('paymentItemTitle').textContent = item.title;
+            document.getElementById('paymentAmount').textContent = item.currentBid.toFixed(2);
+            paymentModal.style.display = 'block';
+        }
+        
+        function processPayment() {
+            if (!currentItem) return;
+            
+            const currentUser = getCurrentUser();
+            if (!currentUser) {
+                alert('Please log in to complete payment.');
+                return;
+            }
+            
+            // Validate payment form
+            const cardName = document.getElementById('cardName').value;
+            const cardNumber = document.getElementById('cardNumber').value;
+            const expiryDate = document.getElementById('expiryDate').value;
+            const cvv = document.getElementById('cvv').value;
+            const billingAddress = document.getElementById('billingAddress').value;
+            
+            if (!cardName || !cardNumber || !expiryDate || !cvv || !billingAddress) {
+                alert('Please fill in all payment details.');
+                return;
+            }
+            
+            // Simple validation for card number (16 digits)
+            if (!/^\d{16}$/.test(cardNumber.replace(/\s/g, ''))) {
+                alert('Please enter a valid 16-digit card number.');
+                return;
+            }
+            
+            // Simple validation for expiry date (MM/YY format)
+            if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
+                alert('Please enter expiry date in MM/YY format.');
+                return;
+            }
+            
+            // Simple validation for CVV (3 digits)
+            if (!/^\d{3}$/.test(cvv)) {
+                alert('Please enter a valid 3-digit CVV.');
+                return;
+            }
+            
+            fetch('/api/payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    itemId: currentItem.id,
+                    userId: currentUser.id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Payment successful! The item is now yours.');
+                    
+                    // Update the item in allItems
+                    const itemIndex = allItems.findIndex(i => i.id === currentItem.id);
+                    if (itemIndex !== -1) {
+                        allItems[itemIndex] = data.item;
+                    }
+                    
+                    // Close the payment modal
+                    document.getElementById('paymentModal').style.display = 'none';
+                    
+                    // Update the item modal to reflect payment
+                    openItemDetails(currentItem.id);
+                } else {
+                    alert(`Payment failed: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error processing payment:', error);
+                alert('Error processing payment. Please try again.');
+            });
+        }
+        
+        // Add these functions at the end of your script
+        
+        // Update all live countdowns on the page
+        function updateLiveCountdowns() {
+            document.querySelectorAll('.time-left').forEach(element => {
+                const endDate = element.getAttribute('data-end-date');
+                if (endDate) {
+                    element.textContent = getTimeLeft(endDate);
+                }
+            });
+        }
+        
+        // Start the live countdown timer
+        function startLiveCountdown() {
+            // Update immediately
+            updateLiveCountdowns();
+            
+            // Then update every second
+            setInterval(updateLiveCountdowns, 1000);
+        }
+        
+        // Start the countdown when the page loads
+        startLiveCountdown();
+    </script>
+</body>
+</html>
